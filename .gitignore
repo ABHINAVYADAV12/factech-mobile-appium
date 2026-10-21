@@ -1,0 +1,24 @@
+node_modules/
+.appium/
+.env
+.env.local
+.env.*.local
+artifacts/
+*.apk
+*.aab
+npm-debug.log*
+*.tsbuildinfo
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Test reports & run history
+reporting-labs.history.json
+allure-report/
+*.log
+
+# iOS binaries & build artifacts
+*.ipa
+*.app
+*.dSYM.zip

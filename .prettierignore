@@ -1,0 +1,5 @@
+node_modules/
+artifacts/
+.appium/
+*.apk
+package-lock.json
