@@ -22,6 +22,73 @@ export const technicianIosHomeScreen = {
     await expect(quickAccess).toBeDisplayed();
   },
 
+  /**
+   * Clicks the "Go Offline" button on the Home card to navigate to the Offline / Profile section.
+   */
+  async openGoOffline(): Promise<void> {
+    const goOfflineBtn = $(
+      '//XCUIElementTypeOther[starts-with(@name, "Go Offline") or contains(@name, "Refresh") or @label="Go Offline"] | //XCUIElementTypeStaticText[@name="Go Offline" or contains(@name, "Refresh")]',
+    );
+    await goOfflineBtn.waitForDisplayed({
+      timeout: 15_000,
+      timeoutMsg: 'Go Offline / Refresh button was not displayed on Technician Home',
+    });
+    await goOfflineBtn.click();
+    await browser.pause(1000);
+  },
+
+  /**
+   * Taps the bottom navigation Home tab (leftmost icon) to return to Home dashboard.
+   */
+  async tapHomeBottomTab(): Promise<void> {
+    const namedHome = $(
+      '//XCUIElementTypeButton[@name="Home" or @label="Home"] | //XCUIElementTypeOther[@name="Home" or @label="Home"]',
+    );
+    if (await namedHome.isDisplayed().catch(() => false)) {
+      await namedHome.click();
+    } else {
+      const { width, height } = await browser.getWindowSize();
+      await browser
+        .action('pointer')
+        .move({ x: Math.round(width * 0.1), y: Math.round(height * 0.94) })
+        .down()
+        .pause(100)
+        .up()
+        .perform();
+    }
+    await this.waitForDisplayed();
+  },
+
+  /**
+   * Verifies that after sync, the Home card displays:
+   * 1. "Refresh" option in place of "Go Offline"
+   * 2. "Ready" status option in place of "Refresh"
+   */
+  async expectOfflineSyncCompletedState(): Promise<void> {
+    // 1. "Refresh" pill option visible in place of "Go Offline"
+    const refreshPill = $(
+      '//*[contains(@name, "Refresh") or contains(@label, "Refresh")]',
+    );
+    await refreshPill.waitForDisplayed({
+      timeout: 15_000,
+      timeoutMsg: '"Refresh" option was not displayed in place of "Go Offline"',
+    });
+    await expect(refreshPill).toBeDisplayed();
+
+    // 2. "Ready" option visible in place of "Refresh"
+    const readyStatus = $(
+      '//*[contains(@name, "Ready") or contains(@label, "Ready")]',
+    );
+    await readyStatus.waitForDisplayed({
+      timeout: 15_000,
+      timeoutMsg: '"Ready" status option was not displayed in place of "Refresh"',
+    });
+    await expect(readyStatus).toBeDisplayed();
+  },
+
+
+
+
   async openOpenWorkOrders(): Promise<void> {
     const button = $(
       '//XCUIElementTypeOther[starts-with(@name, "Open Work Orders")]',

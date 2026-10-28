@@ -20,6 +20,14 @@ import {
 const runtime = loadRuntimeConfig();
 
 process.env.APPIUM_HOME = resolve('.appium');
+// Xcode 27's `devicectl list devices` also reports booted simulators, and the
+// XCUITest driver then treats the simulator UDID as a real device. Only prefer
+// devicectl discovery for physical-device runs.
+if (process.env.DEVICE_TARGET === 'physical') {
+  process.env.APPIUM_XCUITEST_PREFER_DEVICECTL = process.env.APPIUM_XCUITEST_PREFER_DEVICECTL || 'true';
+} else {
+  delete process.env.APPIUM_XCUITEST_PREFER_DEVICECTL;
+}
 
 const residentSelection =
   runtime.app.target === 'resident' &&
@@ -41,6 +49,10 @@ export const config: WebdriverIO.Config = {
   runner: 'local',
 
   specs: ['./tests/ios/**/*.spec.ts'],
+  exclude:
+    process.env.DEVICE_TARGET === 'physical'
+      ? []
+      : ['./tests/ios/**/physical/**/*.spec.ts'],
 
   maxInstances: 1,
 
@@ -102,32 +114,32 @@ export const config: WebdriverIO.Config = {
           'appium:automationName': 'XCUITest',
           'appium:udid':
             process.env.IOS_PHYSICAL_UDID ||
-            process.env.IOS_UDID ||
-            '00008110-00121D893412401E',
-          'appium:deviceName': process.env.IOS_DEVICE_NAME || 'iPhone',
+            process.env.IOS_UDID,
+          'appium:deviceName': process.env.IOS_DEVICE_NAME ,
           'appium:bundleId':
             process.env.IOS_BUNDLE_ID ||
             (runtime.app.target === 'resident'
               ? 'com.sumasamu.iSocietyManager'
               : 'com.sumasamu.isocietyManagerAdmin'),
-          'appium:xcodeOrgId': process.env.IOS_XCODE_ORG_ID || 'VBVKZZ8AF6',
+          'appium:xcodeOrgId': process.env.IOS_XCODE_ORG_ID,
           'appium:xcodeSigningId':
-            process.env.IOS_XCODE_SIGNING_ID || 'iPhone Developer',
+            process.env.IOS_XCODE_SIGNING_ID,
           'appium:updatedWDABundleId':
-            process.env.IOS_WDA_BUNDLE_ID ||
-            'com.abhinav.WebDriverAgentRunner',
+            process.env.IOS_WDA_BUNDLE_ID,
           'appium:noReset': true,
           'appium:newCommandTimeout': 240,
+          'appium:wdaLaunchTimeout': 120_000,
+          'appium:wdaStartupRetries': 4,
         }
       : {
           platformName: 'iOS',
           'appium:automationName': 'XCUITest',
           'appium:udid':
-            process.env.IOS_UDID || 'A1A276A2-FB3B-4978-A52F-352C3B66F7EC',
+            process.env.IOS_UDID,
           'appium:deviceName':
-            process.env.IOS_DEVICE_NAME || 'iPhone Simulator',
+            process.env.IOS_DEVICE_NAME,
           'appium:platformVersion':
-            process.env.IOS_PLATFORM_VERSION || '27.0',
+            process.env.IOS_PLATFORM_VERSION,
           'appium:bundleId':
             process.env.IOS_BUNDLE_ID ||
             (runtime.app.target === 'resident'

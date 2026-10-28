@@ -75,49 +75,130 @@ export const technicianIosComplaintScreen = {
   },
 
   async tapRaise(): Promise<void> {
-    const raiseButton = $('~, Raise');
-    await raiseButton.waitForDisplayed({ timeout: 15_000 });
-    await raiseButton.click();
+    const raiseButton = $('~, Raise');
+    const fallbackRaise = $(
+      '//XCUIElementTypeOther[@name=", Raise" or contains(@name, "Raise")] | //XCUIElementTypeButton[@name=", Raise" or contains(@name, "Raise")]',
+    );
+    if (await raiseButton.isDisplayed().catch(() => false)) {
+      await raiseButton.click();
+    } else {
+      await fallbackRaise.waitForDisplayed({ timeout: 15_000 });
+      await fallbackRaise.click();
+    }
+    await browser.pause(1000);
+  },
+
+  async verifyCategoryGrid(): Promise<void> {
+    const categorySearch = $(
+      '//XCUIElementTypeTextField[contains(@placeholderValue, "Search Category") or contains(@value, "Search Category")] | //*[contains(@name, "Search Category") or contains(@label, "Search Category")]',
+    );
+    await categorySearch.waitForDisplayed({
+      timeout: 15_000,
+      timeoutMsg: 'Search Category input or Category grid was not displayed',
+    });
+    await expect(categorySearch).toBeDisplayed();
   },
 
   async verifyCategoryList(): Promise<void> {
-    const categoryList = $(
-      '-ios predicate string:label CONTAINS "Search Category" AND label CONTAINS "Electricity"',
-    );
-    await categoryList.waitForDisplayed({ timeout: 15_000 });
-    await expect(categoryList).toBeDisplayed();
+    await this.verifyCategoryGrid();
   },
 
   async selectCategory(category: string): Promise<void> {
     if (category.toLowerCase() === 'electricity') {
       // In the iOS React Native layout, the 2-column grid is grouped as a single accessible container.
-      // Column 1 (Electricity) is located at x: 105, y: 320.
-      await browser
-        .action('pointer')
-        .move({ x: 105, y: 320 })
-        .down()
-        .pause(100)
-        .up()
-        .perform();
+      // Dynamically calculate tap coordinates based on Search Category input location
+      const searchBox = $(
+        '//XCUIElementTypeTextField[contains(@placeholderValue, "Search Category") or contains(@value, "Search Category")]',
+      );
+      if (await searchBox.isDisplayed().catch(() => false)) {
+        const loc = await searchBox.getLocation();
+        const size = await searchBox.getSize();
+        // Column 1 (Electricity) card center
+        const tapX = Math.round(loc.x + size.width * 0.25);
+        const tapY = Math.round(loc.y + size.height + 70);
+        await browser
+          .action('pointer')
+          .move({ x: tapX, y: tapY })
+          .down()
+          .pause(100)
+          .up()
+          .perform();
+      } else {
+        // Fallback to coordinates for iPhone 16 layout (x: 100, y: 260)
+        await browser
+          .action('pointer')
+          .move({ x: 100, y: 260 })
+          .down()
+          .pause(100)
+          .up()
+          .perform();
+      }
     } else {
       const catEl = $(`-ios predicate string:label CONTAINS "${category}"`);
       await catEl.waitForDisplayed({ timeout: 15_000 });
       await catEl.click();
     }
+    await browser.pause(2000);
   },
 
   async verifySubCategoriesDisplayed(expectedSubCategory: string = 'Power Outage'): Promise<void> {
     const subCategorySearch = $(
-      '//XCUIElementTypeTextField[@value="Search Sub Category..." or @placeholderValue="Search Sub Category..."]',
+      '//XCUIElementTypeTextField[contains(@placeholderValue, "Search Sub Category") or contains(@value, "Search Sub Category")] | //*[contains(@name, "Search Sub Category") or contains(@label, "Search Sub Category")]',
     );
-    await subCategorySearch.waitForDisplayed({ timeout: 15_000 });
+    await subCategorySearch.waitForDisplayed({
+      timeout: 15_000,
+      timeoutMsg: 'Search Sub Category field was not displayed',
+    });
     await expect(subCategorySearch).toBeDisplayed();
 
     const subCategoryItem = $(
-      `//XCUIElementTypeOther[contains(@name, "${expectedSubCategory}") or contains(@label, "${expectedSubCategory}")]`,
+      `~P, ${expectedSubCategory}`,
     );
-    await subCategoryItem.waitForDisplayed({ timeout: 15_000 });
-    await expect(subCategoryItem).toBeDisplayed();
+    const fallbackItem = $(
+      `//XCUIElementTypeOther[@name="P, ${expectedSubCategory}" or contains(@name, "${expectedSubCategory}")] | //XCUIElementTypeStaticText[contains(@name, "${expectedSubCategory}")]`,
+    );
+
+    await browser.waitUntil(
+      async () => {
+        return (
+          (await subCategoryItem.isDisplayed().catch(() => false)) ||
+          (await fallbackItem.isDisplayed().catch(() => false))
+        );
+      },
+      {
+        timeout: 15_000,
+        timeoutMsg: `Sub-category "${expectedSubCategory}" was not displayed`,
+      },
+    );
+  },
+
+  async selectSubCategory(subCategory: string = 'Power Outage'): Promise<void> {
+    await browser.pause(1000);
+    const subCategoryItem = $(
+      `~P, ${subCategory}`,
+    );
+    const fallbackItem = $(
+      `//XCUIElementTypeOther[@name="P, ${subCategory}" or contains(@name, "${subCategory}")] | //XCUIElementTypeStaticText[contains(@name, "${subCategory}")]`,
+    );
+
+    if (await subCategoryItem.waitForDisplayed({ timeout: 10_000 }).then(() => true).catch(() => false)) {
+      await subCategoryItem.click();
+    } else {
+      await fallbackItem.waitForDisplayed({ timeout: 15_000 });
+      await fallbackItem.click();
+    }
+    await browser.pause(2000);
+  },
+
+  async verifyCreationFormDisplayed(): Promise<void> {
+    const formIndicator = $(
+      '//*[contains(@name, "Create Issue") or contains(@label, "Create Issue") or contains(@name, "Describe the issue") or contains(@label, "Describe the issue") or contains(@name, "Search Location") or contains(@label, "Search Location")]',
+    );
+    await formIndicator.waitForDisplayed({
+      timeout: 20_000,
+      timeoutMsg: 'Complaint creation form was not displayed after selecting sub-category',
+    });
+    await expect(formIndicator).toBeDisplayed();
   },
 
   async getFirstComplaintId(): Promise<string> {

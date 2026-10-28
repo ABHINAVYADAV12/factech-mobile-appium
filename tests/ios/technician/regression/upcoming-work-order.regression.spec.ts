@@ -27,8 +27,6 @@ describe('Technician iOS Upcoming Work Orders - Regression', () => {
   // TC-06: Verify date-range filtering.
   
 
-
-
 it('TC-06 - filters work orders by selected date range', async () => {
   // Define the selected date range: today through tomorrow.
   const fromDate = new Date();

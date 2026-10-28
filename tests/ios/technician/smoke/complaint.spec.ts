@@ -76,6 +76,30 @@ describe('Technician iOS Complaint Smoke', () => {
     await technicianIosComplaintScreen.verifyEmptyState('No Complaints Found');
   });
 
+  it('TC04 - Verify Complaint Category and Sub-Category Selection', async () => {
+    // 1. Open Complaint section
+    await technicianIosHomeScreen.openOpenComplaints();
+    await technicianIosComplaintScreen.waitForDisplayed();
+
+    // 2. Tap '+ Raise' floating button
+    await technicianIosComplaintScreen.tapRaise();
+
+    // 3. Verify the Category grid
+    await technicianIosComplaintScreen.verifyCategoryGrid();
+
+    // 4. Select 'Electricity'
+    await technicianIosComplaintScreen.selectCategory('Electricity');
+
+    // 5. Verify sub-categories list displays 'Power Outage'
+    await technicianIosComplaintScreen.verifySubCategoriesDisplayed('Power Outage');
+
+    // 6. Select 'Power Outage'
+    await technicianIosComplaintScreen.selectSubCategory('Power Outage');
+
+    // Expected Result: Category grid displays; selecting Electricity shows electrical sub-categories; selecting Power Outage opens the creation form.
+    await technicianIosComplaintScreen.verifyCreationFormDisplayed();
+  });
+
   it('TC15 - Verify Closed Complaint Read-Only State and Pull-to-Refresh', async () => {
     // 1. Open Complaint section
     await technicianIosHomeScreen.openOpenComplaints();

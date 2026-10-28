@@ -20,16 +20,16 @@ describe('Technician iOS Work Order - Regression', () => {
     await technicianIosLoginScreen.waitForDisplayed();
     await technicianIosLoginScreen.login(username, password);
 
-    // Step 2: From Home dashboard, navigate into Open Work Orders
+    // Land on Home dashboard
     await technicianIosHomeScreen.waitForDisplayed();
-    await technicianIosHomeScreen.openOpenWorkOrders();
-
-    // Step 3: Wait until the Work Order screen with its 3 tabs is ready
-    await technicianIosWorkOrderScreen.waitForDisplayed();
   });
 
   // TC-03: Verify Applying and Resetting Work Order Status Filters
   it('TC-03 - Verify Applying and Resetting Work Order Status Filters', async () => {
+    // Navigate into Open Work Orders
+    await technicianIosHomeScreen.openOpenWorkOrders();
+    await technicianIosWorkOrderScreen.waitForDisplayed();
+
     const statuses = [
       'OPEN',
       'STARTED',
@@ -65,6 +65,10 @@ describe('Technician iOS Work Order - Regression', () => {
 
   // TC-04: Verify Applying and Resetting Work Order Flag Filters
   it('TC-04 - Verify Applying and Resetting Work Order Flag Filters', async () => {
+    // Navigate into Open Work Orders
+    await technicianIosHomeScreen.openOpenWorkOrders();
+    await technicianIosWorkOrderScreen.waitForDisplayed();
+
     const flags = ['No Delay', 'Delayed', 'All'];
 
     for (const flag of flags) {
@@ -94,6 +98,10 @@ describe('Technician iOS Work Order - Regression', () => {
 
   // TC-05: Verify Applying and Resetting Work Order Date Filters
   it('TC-05 - Verify Applying and Resetting Work Order Date Filters', async () => {
+    // Navigate into Open Work Orders
+    await technicianIosHomeScreen.openOpenWorkOrders();
+    await technicianIosWorkOrderScreen.waitForDisplayed();
+
     const dateOptions = ['Today', 'Yesterday', 'All'];
 
     for (const dateOption of dateOptions) {
@@ -120,4 +128,107 @@ describe('Technician iOS Work Order - Regression', () => {
     // 5. Verify the Work Order list refreshes and displays the default records
     await technicianIosWorkOrderScreen.verifyStatusesWhileScrolling('OPEN');
   });
+
+  // TC-10: Verify Completion Remark
+  it('TC-10 - Verify Completion Remark', async () => {
+    const targetAsset = 'Formula Asset with nfc';
+    const targetWoId = 'WO-41754';
+    const targetWoTitle = 'Smoke Test - WO PM';
+    const completionRemark = 'My work is done';
+
+    // Step 1: Open WO
+    await technicianIosWorkOrderScreen.openWorkOrderViaAssetScan(
+      targetAsset,
+      targetWoId,
+      targetWoTitle,
+    );
+
+    // Step 2: Enter completion remark & Step 3: Save/continue
+    await technicianIosWorkOrderScreen.enterCompletionRemark(completionRemark);
+
+    // Expected Result: Popup indicating successfully marked as complete
+    await technicianIosWorkOrderScreen.verifySuccessfullyMarkedAsComplete();
+  });
+
+  // TC-11: Verify Mark WO as Complete
+  it('TC-11 - Verify Mark WO as Complete', async () => {
+    const targetAsset = 'Formula Asset with nfc';
+    const targetWoId = 'WO-41539';
+    const targetWoTitle = 'Smoke Test - WO PM';
+    const completionRemark = 'My work is done';
+
+    // Step 1: Open WO
+    await technicianIosWorkOrderScreen.openWorkOrderViaAssetScan(
+      targetAsset,
+      targetWoId,
+      targetWoTitle,
+    );
+
+    // Step 2, 3, 4: Complete required work, enter remark, tap Mark as Complete
+    await technicianIosWorkOrderScreen.enterCompletionRemark(completionRemark);
+
+    // Step 5: Verify success popup and confirm/dismiss
+    await technicianIosWorkOrderScreen.verifySuccessfullyMarkedAsComplete();
+    await technicianIosWorkOrderScreen.dismissSuccessPopup();
+
+    // Expected Result: Transition from OPEN to CLOSED tab and verify WO ID is displayed
+    await technicianIosWorkOrderScreen.verifyWorkOrderInClosedTab(targetWoId);
+  });
+
+  // TC-12: Verify Completed WO Removed from Open List
+  it('TC-12 - Verify Completed WO Removed from Open List', async () => {
+    const targetAsset = 'Formula Asset with nfc';
+    const targetWoId = 'WO-40176';
+    const targetWoTitle = 'Smoke Test - WO PM';
+    const completionRemark = 'My work is done';
+
+    // Step 1: Complete WO
+    await technicianIosWorkOrderScreen.openWorkOrderViaAssetScan(
+      targetAsset,
+      targetWoId,
+      targetWoTitle,
+    );
+    await technicianIosWorkOrderScreen.enterCompletionRemark(completionRemark);
+    await technicianIosWorkOrderScreen.verifySuccessfullyMarkedAsComplete();
+    await technicianIosWorkOrderScreen.dismissSuccessPopup();
+
+    // Step 2: Return to Open WO list
+    await technicianIosWorkOrderScreen.returnToOpenList();
+
+    // Refresh the screen after mark as complete
+    await technicianIosWorkOrderScreen.refreshList();
+
+    // Expected Result: Completed WO is removed from the Open list
+    await technicianIosWorkOrderScreen.verifyWorkOrderNotPresentInOpenList(targetWoId);
+  });
+
+  // TC-17: Verify Work Order Status Update
+  it('TC-17 - Verify Work Order Status Update via Scan', async () => {
+    const targetAsset = 'Formula Asset with nfc';
+    const holdReason = 'Waiting for spare parts from vendor';
+
+    // Step 1: Open the first available WO for the selected asset via Scan
+    const targetWoId = await technicianIosWorkOrderScreen.openFirstWorkOrderViaAssetScan(targetAsset);
+
+    // Step 2: Open Workorder status update modal
+    await technicianIosWorkOrderScreen.openUpdateStatusModal();
+
+    // Step 3: Select HOLD from dropdown
+    await technicianIosWorkOrderScreen.selectStatusInModal('HOLD');
+
+    // Assertion 1: Without reason we cannot update (modal remains open and blocks update)
+    await technicianIosWorkOrderScreen.verifyCannotUpdateWithoutReason();
+
+    // Step 4: Enter reason and submit update
+    await technicianIosWorkOrderScreen.enterStatusUpdateReason(holdReason);
+    await browser.pause(2000);
+    await technicianIosWorkOrderScreen.submitStatusUpdate();
+    // Step 5: Verify work order transitions into the HOLD filter
+    await technicianIosWorkOrderScreen.verifyWorkOrderInHoldFilter(targetWoId );
+
+    // Step 6: Open the same WO in HOLD section, click Update, then click History to verify status changed to HOLD
+    await technicianIosWorkOrderScreen.verifyStatusInHistory(targetWoId || targetAsset);
+  });
 });
+
+

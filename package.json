@@ -24,6 +24,8 @@
     "test:production-regression": "cross-env TEST_LANE=production-regression wdio run wdio.conf.ts",
     "pretest:production-regression:hardware": "npm run pretest:production-regression",
     "test:production-regression:hardware": "cross-env TEST_LANE=production-regression RUN_HARDWARE_TESTS=true wdio run wdio.conf.ts",
+    "test:ios:sim": "wdio run wdio.ios.conf.ts",
+    "test:ios:device": "wdio run wdio.ios.device.conf.ts",
     "test:unit": "tsx --test tests/unit/**/*.test.ts",
     "traceability:check": "tsx scripts/verify-traceability.ts",
     "typecheck": "tsc --noEmit",
