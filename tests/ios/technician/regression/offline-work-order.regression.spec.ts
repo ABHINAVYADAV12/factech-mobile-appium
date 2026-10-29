@@ -1,6 +1,7 @@
 import { technicianIosLoginScreen } from '../../../../src/screens/ios/technician/login.screen.js';
 import { technicianIosHomeScreen } from '../../../../src/screens/ios/technician/home.screen.js';
 import { technicianIosWorkOrderScreen } from '../../../../src/screens/ios/technician/work-order.screen.js';
+import { technicianIosWorkOrderInstructionScreen } from '../../../../src/screens/ios/technician/work-order-instruction.screen.js';
 import { technicianIosProfileScreen } from '../../../../src/screens/ios/technician/profile.screen.js';
 import { iosConnectivity } from '../../../../src/config/ios-connectivity.js';
 
@@ -13,9 +14,7 @@ describe('Technician iOS Offline Work Order - Regression', () => {
     const password = process.env.TECHNICIAN_PASSWORD;
 
     if (!username || !password) {
-      throw new Error(
-        'Missing TECHNICIAN_USERNAME or TECHNICIAN_PASSWORD',
-      );
+      throw new Error('Missing TECHNICIAN_USERNAME or TECHNICIAN_PASSWORD');
     }
 
     // Step 1: Login with technician credentials
@@ -35,8 +34,6 @@ describe('Technician iOS Offline Work Order - Regression', () => {
   // TC-13: Verify Completed WO After Sync
   it('TC-13 - Verify Completed WO After Sync', async () => {
     const targetAsset = 'Formula Asset with nfc';
-    const targetWoId = 'WO-41553';
-    const targetWoTitle = 'Smoke Test - WO PM';
     const completionRemark = 'Completed offline';
 
     // Pre-sync: Fetch latest offline data while online to ensure cache is ready
@@ -59,12 +56,15 @@ describe('Technician iOS Offline Work Order - Regression', () => {
     iosConnectivity.disconnect();
     await browser.pause(2000);
 
+    let actualWoId = '';
     try {
-      await technicianIosWorkOrderScreen.selectAssetAndOpenWorkOrder(
-        targetAsset,
-        targetWoId,
-        targetWoTitle,
-      );
+      // Dynamically select asset, open first WO, and store its exact WO ID before completion
+      actualWoId = await technicianIosWorkOrderScreen.selectAssetAndOpenWorkOrder(targetAsset);
+      expect(actualWoId).not.toBe('');
+
+      // Fill mandatory instructions (since assets under Formula Asset with nfc require instructions)
+      await technicianIosWorkOrderInstructionScreen.fillMandatoryWorkOrderInstructions();
+
       await technicianIosWorkOrderScreen.enterCompletionRemark(completionRemark);
       await browser.pause(2000);
       await technicianIosWorkOrderScreen.dismissSuccessPopup();
@@ -75,8 +75,7 @@ describe('Technician iOS Offline Work Order - Regression', () => {
     }
 
     // Step 3: Kill and reopen app to refresh network state and return cleanly to Home
-    const bundleId =
-      process.env.IOS_BUNDLE_ID || 'com.sumasamu.isocietyManagerAdmin';
+    const bundleId = process.env.IOS_BUNDLE_ID || 'com.sumasamu.isocietyManagerAdmin';
     await browser.terminateApp(bundleId);
     await browser.pause(2000);
     await browser.activateApp(bundleId);
@@ -97,10 +96,11 @@ describe('Technician iOS Offline Work Order - Regression', () => {
     await technicianIosHomeScreen.tapHomeBottomTab();
 
     // Expected Result: Completion data is synchronized successfully
-    // On the same scanned asset screen, verify targetWoId is displayed in the CLOSED section
-    await technicianIosWorkOrderScreen.verifyAssetWorkOrderClosed(
+    // On the same scanned asset screen, verify target work order is displayed in the CLOSED section
+    const closedWoId = await technicianIosWorkOrderScreen.verifyAssetWorkOrderClosed(
       targetAsset,
-      targetWoId,
+      actualWoId,
     );
+    expect(closedWoId).toBe(actualWoId);
   });
 });

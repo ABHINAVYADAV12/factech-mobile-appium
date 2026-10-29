@@ -318,3 +318,307 @@ Installed Play Store package IDs:
 | Technician | `com.sumasamu.isocietyManagerAdmin` |
 
 Automated tests remain `@observe`. Existing `ISM_SK*` and `TEC_SK*` values are source case IDs; do not invent Feature, Story, Acceptance Criteria, or `MTC-*` identifiers.
+
+---
+
+# iOS Automation (WebdriverIO + XCUITest)
+
+Native iOS automation for the iSocietyManager Resident and Facility Manager Technician apps. The stack is WebdriverIO, TypeScript, Mocha, Appium, and XCUITest (`appium-xcuitest-driver`).
+
+## Prerequisites
+
+- **macOS** with **Xcode 15+** or **Xcode 16+** installed
+- **Node.js 24** (`.nvmrc`)
+- **Appium 3+** with the XCUITest driver installed:
+  ```bash
+  npm run appium:setup
+  ```
+- **Command Line Tools**: `xcrun simctl` and `xcrun devicectl` available on `PATH`
+- For physical device runs:
+  - An Apple Developer account (Personal Team or Paid Team)
+  - iPhone paired with macOS and **Developer Mode** enabled
+
+---
+
+## iOS Configuration (`.env`)
+
+Configure the following iOS settings in your local `.env`:
+
+```env
+# Simulator Settings
+IOS_UDID=<SIMULATOR_UDID>                # e.g. A1A276A2-FB3B-4978-A52F-352C3B66F7EC
+IOS_DEVICE_NAME="iPhone Simulator"
+IOS_PLATFORM_VERSION="18.2"              # iOS version of the simulator
+IOS_BUNDLE_ID=com.sumasamu.isocietyManagerAdmin
+
+# Physical Device Settings (Required for Physical/Hardware runs)
+IOS_PHYSICAL_UDID=<PHYSICAL_IPHONE_UDID> # e.g. 00008110-00121D893412401E
+IOS_XCODE_ORG_ID=<APPLE_TEAM_ID>         # 10-character Apple Developer Team ID
+IOS_XCODE_SIGNING_ID="Apple Development" # or "iPhone Developer"
+IOS_WDA_BUNDLE_ID=com.<yourname>.WebDriverAgentRunner
+
+# Technician Credentials & Search Fixtures
+TECHNICIAN_USERNAME=<username>
+TECHNICIAN_PASSWORD=<password>
+TECHNICIAN_TEST_ASSET="test"
+TECHNICIAN_TEST_WO_TITLE="Smoke Test - HK PM"
+TECHNICIAN_TEST_LOCATION="GF"
+```
+
+Find your connected devices and simulators:
+
+- **Simulators**: `xcrun simctl list devices | grep -E "Booted|iPhone"`
+- **Physical Devices**: `xcrun devicectl list devices`
+
+---
+
+## 1. Running on iOS Simulator
+
+The simulator suite exercises native UI workflows without requiring physical hardware (camera QR scans are simulated via mock asset selection).
+
+### Preparation
+
+1. Open the Simulator or boot your target simulator:
+   ```bash
+   xcrun simctl boot <SIMULATOR_UDID>
+   open -a Simulator
+   ```
+2. Verify that the app is installed on the simulator.
+
+### Execution Commands
+
+- **Run Full Simulator Suite (Smoke + Regression)**:
+
+  ```bash
+  npm run test:ios:sim
+  ```
+
+  _(or `npx wdio run wdio.ios.conf.ts`)_
+
+- **Run Smoke Suite Only**:
+
+  ```bash
+  npx wdio run wdio.ios.conf.ts --spec "tests/ios/**/smoke/**/*.spec.ts"
+  ```
+
+- **Run Regression Suite Only**:
+
+  ```bash
+  npx wdio run wdio.ios.conf.ts --spec "tests/ios/**/regression/**/*.spec.ts"
+  ```
+
+- **Run a Specific Spec File**:
+
+  ```bash
+  npx wdio run wdio.ios.conf.ts --spec tests/ios/technician/smoke/work-order.spec.ts
+  ```
+
+- **Run a Single Test Case by Name**:
+  ```bash
+  npx wdio run wdio.ios.conf.ts --spec tests/ios/technician/smoke/work-order.spec.ts --mochaOpts.grep "TC-01"
+  ```
+
+_(Note: Physical hardware camera specs under `tests/ios/**/physical/**/*.spec.ts` are automatically excluded from simulator runs)._
+
+---
+
+## 2. Running on Physical iOS Device (Hardware / Camera QR Scans)
+
+Hardware test cases (such as **TC-07: Verify Asset QR Scan** and **TC-08: Verify Scanned WO Details**) run directly on a physical iPhone using the device camera.
+
+### Device Preparation Checklist
+
+1. **Screen Unlocked**:
+   - Keep your iPhone screen unlocked and awake on the Home screen when launching tests.
+2. **Developer Mode**:
+   - Enable via **Settings → Privacy & Security → Developer Mode** (requires device restart).
+3. **UI Automation Enabled**:
+   - In **Settings → Developer**, ensure **Enable UI Automation** is toggled **ON**.
+4. **Trust Certificate**:
+   - In **Settings → General → VPN & Device Management**, ensure your Apple Development certificate for WebDriverAgent is **Trusted**.
+5. **CoreDevice Tunnel**:
+   - On iOS 17+ and iOS 18+, Apple uses native CoreDevice tunnels. The test configuration automatically handles discovery via `APPIUM_XCUITEST_PREFER_DEVICECTL=true` without needing manual external tunnels.
+
+### Execution Commands
+
+- **Run Full Physical Suite**:
+
+  ```bash
+  npm run test:ios:device
+  ```
+
+  _(or `npx wdio run wdio.ios.device.conf.ts`)_
+
+- **Run TC-07 (Asset QR Scan)**:
+
+  ```bash
+  npx wdio run wdio.ios.device.conf.ts --spec tests/ios/technician/physical/work-order.spec.ts --mochaOpts.grep "TC-07"
+  ```
+
+  _When prompted on console (`>>> Point iPhone camera at the Asset QR sticker now... <<<`), point the iPhone camera at your physical Asset QR sticker._
+
+- **Run TC-08 (Scanned WO Details)**:
+  ```bash
+  npx wdio run wdio.ios.device.conf.ts --spec tests/ios/technician/physical/work-order.spec.ts --mochaOpts.grep "TC-08"
+  ```
+
+---
+
+## iOS Test Reports
+
+Test reports and failure artifacts are generated automatically in the `artifacts/` folder:
+
+- **Reporting Labs HTML Report**:
+  Open `./artifacts/reporting-labs/index.html` in any browser, or view `./artifacts/reporting-labs/report.pdf`.
+- **Allure Reports**:
+  ```bash
+  npm run report
+  ```
+- **Screenshots & Logs**:
+  Captured on failure inside `./artifacts/` and `./artifacts/appium/wdio-appium.log`.
+
+---
+
+# iOS Automation (WebdriverIO + XCUITest)
+
+Native iOS automation for the iSocietyManager Resident and Facility Manager Technician apps. The stack is WebdriverIO, TypeScript, Mocha, Appium, and XCUITest (`appium-xcuitest-driver`).
+
+## Prerequisites
+
+- **macOS** with **Xcode 15+** or **Xcode 16+** installed
+- **Node.js 24** (`.nvmrc`)
+- **Appium 3+** with the XCUITest driver installed:
+  ```bash
+  npm run appium:setup
+  ```
+- **Command Line Tools**: `xcrun simctl` and `xcrun devicectl` available on `PATH`
+- For physical device runs:
+  - An Apple Developer account (Personal Team or Paid Team)
+  - iPhone paired with macOS and **Developer Mode** enabled
+
+---
+
+## iOS Configuration (`.env`)
+
+Configure the following iOS settings in your local `.env`:
+
+```env
+# Simulator Settings
+IOS_UDID=<SIMULATOR_UDID>                # e.g. A1A276A2-FB3B-4978-A52F-352C3B66F7EC
+IOS_DEVICE_NAME="iPhone Simulator"
+IOS_PLATFORM_VERSION="18.2"              # iOS version of the simulator
+IOS_BUNDLE_ID=com.sumasamu.isocietyManagerAdmin
+
+# Physical Device Settings (Required for Physical/Hardware runs)
+IOS_PHYSICAL_UDID=<PHYSICAL_IPHONE_UDID> # e.g. 00008110-00121D893412401E
+IOS_XCODE_ORG_ID=<APPLE_TEAM_ID>         # 10-character Apple Developer Team ID
+IOS_XCODE_SIGNING_ID="Apple Development" # or "iPhone Developer"
+IOS_WDA_BUNDLE_ID=com.<yourname>.WebDriverAgentRunner
+
+# Technician Credentials & Search Fixtures
+TECHNICIAN_USERNAME=<username>
+TECHNICIAN_PASSWORD=<password>
+TECHNICIAN_TEST_ASSET="test"
+TECHNICIAN_TEST_WO_TITLE="Smoke Test - HK PM"
+TECHNICIAN_TEST_LOCATION="GF"
+```
+
+Find your connected devices and simulators:
+- **Simulators**: `xcrun simctl list devices | grep -E "Booted|iPhone"`
+- **Physical Devices**: `xcrun devicectl list devices`
+
+---
+
+## 1. Running on iOS Simulator
+
+The simulator suite exercises native UI workflows without requiring physical hardware (camera QR scans are simulated via mock asset selection).
+
+### Preparation
+1. Open the Simulator or boot your target simulator:
+   ```bash
+   xcrun simctl boot <SIMULATOR_UDID>
+   open -a Simulator
+   ```
+2. Verify that the app is installed on the simulator.
+
+### Execution Commands
+
+- **Run Full Simulator Suite (Smoke + Regression)**:
+  ```bash
+  npm run test:ios:sim
+  ```
+  *(or `npx wdio run wdio.ios.conf.ts`)*
+
+- **Run Smoke Suite Only**:
+  ```bash
+  npx wdio run wdio.ios.conf.ts --spec "tests/ios/**/smoke/**/*.spec.ts"
+  ```
+
+- **Run Regression Suite Only**:
+  ```bash
+  npx wdio run wdio.ios.conf.ts --spec "tests/ios/**/regression/**/*.spec.ts"
+  ```
+
+- **Run a Specific Spec File**:
+  ```bash
+  npx wdio run wdio.ios.conf.ts --spec tests/ios/technician/smoke/work-order.spec.ts
+  ```
+
+- **Run a Single Test Case by Name**:
+  ```bash
+  npx wdio run wdio.ios.conf.ts --spec tests/ios/technician/smoke/work-order.spec.ts --mochaOpts.grep "TC-01"
+  ```
+
+*(Note: Physical hardware camera specs under `tests/ios/**/physical/**/*.spec.ts` are automatically excluded from simulator runs).*
+
+---
+
+## 2. Running on Physical iOS Device (Hardware / Camera QR Scans)
+
+Hardware test cases (such as **TC-07: Verify Asset QR Scan** and **TC-08: Verify Scanned WO Details**) run directly on a physical iPhone using the device camera.
+
+### Device Preparation Checklist
+1. **Screen Unlocked**:
+   - Keep your iPhone screen unlocked and awake on the Home screen when launching tests.
+2. **Developer Mode**:
+   - Enable via **Settings → Privacy & Security → Developer Mode** (requires device restart).
+3. **UI Automation Enabled**:
+   - In **Settings → Developer**, ensure **Enable UI Automation** is toggled **ON**.
+4. **Trust Certificate**:
+   - In **Settings → General → VPN & Device Management**, ensure your Apple Development certificate for WebDriverAgent is **Trusted**.
+5. **CoreDevice Tunnel**:
+   - On iOS 17+ and iOS 18+, Apple uses native CoreDevice tunnels. The test configuration automatically handles discovery via `APPIUM_XCUITEST_PREFER_DEVICECTL=true` without needing manual external tunnels.
+
+### Execution Commands
+
+- **Run Full Physical Suite**:
+  ```bash
+  npm run test:ios:device
+  ```
+  *(or `npx wdio run wdio.ios.device.conf.ts`)*
+
+- **Run TC-07 (Asset QR Scan)**:
+  ```bash
+  npx wdio run wdio.ios.device.conf.ts --spec tests/ios/technician/physical/work-order.spec.ts --mochaOpts.grep "TC-07"
+  ```
+  *When prompted on console (`>>> Point iPhone camera at the Asset QR sticker now... <<<`), point the iPhone camera at your physical Asset QR sticker.*
+
+- **Run TC-08 (Scanned WO Details)**:
+  ```bash
+  npx wdio run wdio.ios.device.conf.ts --spec tests/ios/technician/physical/work-order.spec.ts --mochaOpts.grep "TC-08"
+  ```
+
+---
+
+## iOS Test Reports
+
+Test reports and failure artifacts are generated automatically in the `artifacts/` folder:
+
+- **Reporting Labs HTML Report**:
+  Open `./artifacts/reporting-labs/index.html` in any browser, or view `./artifacts/reporting-labs/report.pdf`.
+- **Allure Reports**:
+  ```bash
+  npm run report
+  ```
+- **Screenshots & Logs**:
+  Captured on failure inside `./artifacts/` and `./artifacts/appium/wdio-appium.log`.

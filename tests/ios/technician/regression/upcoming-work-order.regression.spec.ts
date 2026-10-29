@@ -81,13 +81,6 @@ if (!isWithinRange) {
 });
 
 
-
-
-
-
-
-
-
 it('TC-07 - verifies multiple upcoming work orders and empty state', async () => {
   // Select today as the From date.
  await technicianIosUpcomingWorkOrderScreen.selectDateRange(0, 1);
@@ -155,14 +148,11 @@ it('TC-08 - verifies search by title, asset, and location', async () => {
     expect(results.length).toBeGreaterThan(0);
 
     // Every collected card must contain the search word.
-    for (const cardName of results) {
-      
+    for (const cardName of results) {   
 expect(
   cardName.toLowerCase(),
 ).toContain(searchText.toLowerCase());
-
     }
-
     // Clear search before the next check.
     await technicianIosUpcomingWorkOrderScreen.clearSearch();
     await browser.pause(5000);
@@ -186,10 +176,6 @@ expect(
     'Location',
   );
 });
-
-
-
-
 
 it('TC-09 - verifies total work-order count against filtered records', async () => {
   // Set date range: today to tomorrow.

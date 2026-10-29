@@ -3,7 +3,6 @@ import { technicianIosHomeScreen } from '../../../../src/screens/ios/technician/
 import { technicianIosProfileScreen } from '../../../../src/screens/ios/technician/profile.screen.js';
 import { technicianIosWorkOrderScreen } from '../../../../src/screens/ios/technician/work-order.screen.js';
 
-
 describe('Work Order Smoke Tests', () => {
   beforeEach(async () => {
     // Reset session for a clean test state
@@ -13,9 +12,7 @@ describe('Work Order Smoke Tests', () => {
     const password = process.env.TECHNICIAN_PASSWORD;
 
     if (!username || !password) {
-      throw new Error(
-        'Missing TECHNICIAN_USERNAME or TECHNICIAN_PASSWORD',
-      );
+      throw new Error('Missing TECHNICIAN_USERNAME or TECHNICIAN_PASSWORD');
     }
 
     // Step 1: Login with technician credentials
@@ -125,13 +122,9 @@ describe('Work Order Smoke Tests', () => {
     await browser.pause(2000);
 
     const targetAsset = 'Formula Asset with nfc';
-    const targetWoId = 'WO-41345';
-    const targetWoTitle = 'Smoke Test - WO PM';
 
     // Step 3: Type asset name in "Search assets..." field
-    const searchField = $(
-      '//XCUIElementTypeTextField[@placeholderValue="Search assets..."]',
-    );
+    const searchField = $('//XCUIElementTypeTextField[@placeholderValue="Search assets..."]');
     await searchField.waitForDisplayed({
       timeout: 15_000,
       timeoutMsg: 'Search assets input field was not displayed',
@@ -150,38 +143,27 @@ describe('Work Order Smoke Tests', () => {
     await matchingAsset.click();
     await browser.pause(2500);
 
-    // Step 5: Locate and click the target Work Order card (scroll once if not immediately visible)
-    const targetWoCard = $(
-      `//XCUIElementTypeOther[contains(@name, "${targetWoId}") or contains(@label, "${targetWoId}")] | //XCUIElementTypeOther[contains(@name, "${targetWoTitle}") or contains(@label, "${targetWoTitle}")]`,
+    // Step 5: Locate and click the first available Work Order card under the asset
+    const firstWoCard = $(
+      '//XCUIElementTypeOther[starts-with(@name, "WO-") or contains(@name, "WO-")] | //XCUIElementTypeOther[contains(@name, "PM") or contains(@name, "Smoke")] | //XCUIElementTypeScrollView//XCUIElementTypeOther[contains(@name, "WO-")][1]',
     );
 
-    let isDisplayed = await targetWoCard.isDisplayed().catch(() => false);
-    if (!isDisplayed) {
-      // If not visible initially, scroll down once to reveal it
+    let isDisplayed = await firstWoCard.isDisplayed().catch(() => false);
+    for (let swipe = 0; swipe < 6 && !isDisplayed; swipe++) {
       await browser.execute('mobile: swipe', { direction: 'up' });
       await browser.pause(1200);
-      isDisplayed = await targetWoCard.isDisplayed().catch(() => false);
+      isDisplayed = await firstWoCard.isDisplayed().catch(() => false);
     }
 
-    const woCardToClick = isDisplayed
-      ? targetWoCard
-      : $(
-          '//XCUIElementTypeOther[starts-with(@name, "WO-") or starts-with(@name, "HK-") or starts-with(@name, "LG-") or starts-with(@name, "LB-") or starts-with(@name, "BR-")] | //XCUIElementTypeOther[contains(@name, "Work Order") or contains(@name, "WO")]',
-        );
-
-    await woCardToClick.waitForDisplayed({
+    await firstWoCard.waitForDisplayed({
       timeout: 20_000,
-      timeoutMsg: `Target work order (${targetWoId} / ${targetWoTitle}) was not displayed for selected asset`,
+      timeoutMsg: `No work order card was displayed for asset "${targetAsset}"`,
     });
-    await woCardToClick.click();
+    await firstWoCard.click();
     await browser.pause(2500);
 
     // Step 6: Tap Show/Instructions if instructions checklist is not already visible
-    if (
-      !(await technicianIosWorkOrderScreen.checklistHeader
-        .isDisplayed()
-        .catch(() => false))
-    ) {
+    if (!(await technicianIosWorkOrderScreen.checklistHeader.isDisplayed().catch(() => false))) {
       const showInstructionsBtn = $(
         '//XCUIElementTypeOther[contains(@name, "Show") or contains(@label, "Show") or contains(@name, "Instructions") or contains(@label, "Instructions")]',
       );

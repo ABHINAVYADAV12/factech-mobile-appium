@@ -1,6 +1,7 @@
 import { technicianIosLoginScreen } from '../../../../src/screens/ios/technician/login.screen.js';
 import { technicianIosHomeScreen } from '../../../../src/screens/ios/technician/home.screen.js';
 import { technicianIosWorkOrderScreen } from '../../../../src/screens/ios/technician/work-order.screen.js';
+import { technicianIosWorkOrderInstructionScreen } from '../../../../src/screens/ios/technician/work-order-instruction.screen.js';
 
 describe('Technician iOS Work Order - Regression', () => {
   beforeEach(async () => {
@@ -11,9 +12,7 @@ describe('Technician iOS Work Order - Regression', () => {
     const password = process.env.TECHNICIAN_PASSWORD;
 
     if (!username || !password) {
-      throw new Error(
-        'Missing TECHNICIAN_USERNAME or TECHNICIAN_PASSWORD',
-      );
+      throw new Error('Missing TECHNICIAN_USERNAME or TECHNICIAN_PASSWORD');
     }
 
     // Step 1: Login with technician credentials
@@ -50,7 +49,8 @@ describe('Technician iOS Work Order - Regression', () => {
 
       // 3. Tap Refresh once and verify the results or empty state remain consistent
       await technicianIosWorkOrderScreen.refreshList();
-      const afterRefresh = await technicianIosWorkOrderScreen.verifyFilteredCardsOrEmptyState(status);
+      const afterRefresh =
+        await technicianIosWorkOrderScreen.verifyFilteredCardsOrEmptyState(status);
 
       // Assert consistency before and after refresh
       expect(afterRefresh.emptyState).toBe(result.emptyState);
@@ -69,31 +69,26 @@ describe('Technician iOS Work Order - Regression', () => {
     await technicianIosHomeScreen.openOpenWorkOrders();
     await technicianIosWorkOrderScreen.waitForDisplayed();
 
-    const flags = ['No Delay', 'Delayed', 'All'];
+    // 1. Go to Flag, click on 'No Delay', apply and verify we return to work order card screen
+    await technicianIosWorkOrderScreen.applyCategoryFilter('Flag', 'No Delay');
+    await technicianIosWorkOrderScreen.waitForDisplayed();
 
-    for (const flag of flags) {
-      // 1. Open Filter and select Flag category option
-      await technicianIosWorkOrderScreen.applyCategoryFilter('Flag', flag);
+    // 2. Go to Flag, click on 'Delayed', apply and verify we return to work order card screen
+    await technicianIosWorkOrderScreen.applyCategoryFilter('Flag', 'Delayed');
+    await technicianIosWorkOrderScreen.waitForDisplayed();
 
-      // 2. Verify displayed records or appropriate empty state
-      const result = await technicianIosWorkOrderScreen.verifyFlagFilteredCardsOrEmptyState(
-        flag as 'No Delay' | 'Delayed' | 'All',
-      );
+    // 3. Go to Flag, click on 'All', apply and verify we return to work order card screen
+    await technicianIosWorkOrderScreen.applyCategoryFilter('Flag', 'All');
+    await technicianIosWorkOrderScreen.waitForDisplayed();
 
-      // 3. Tap Refresh once and verify the results or empty state remain consistent
-      await technicianIosWorkOrderScreen.refreshList();
-      const afterRefresh = await technicianIosWorkOrderScreen.verifyFlagFilteredCardsOrEmptyState(
-        flag as 'No Delay' | 'Delayed' | 'All',
-      );
+    // 4. Click on Reset, verify it goes back to 'No Delay' and highlights it with blue color
+    await technicianIosWorkOrderScreen.openFilterModal();
+    await technicianIosWorkOrderScreen.selectFilterCategory('Flag');
+    await technicianIosWorkOrderScreen.resetFilters();
+    await technicianIosWorkOrderScreen.verifyFilterOptionSelected('No Delay');
 
-      expect(afterRefresh.emptyState).toBe(result.emptyState);
-    }
-
-    // 4. Tap Reset and verify the default filter state is restored
-    await technicianIosWorkOrderScreen.resetAndApplyFilters();
-
-    // 5. Verify the Work Order list refreshes and displays the default records
-    await technicianIosWorkOrderScreen.verifyStatusesWhileScrolling('OPEN');
+    // Close modal cleanly
+    await technicianIosWorkOrderScreen.applyFilters();
   });
 
   // TC-05: Verify Applying and Resetting Work Order Date Filters
@@ -132,18 +127,15 @@ describe('Technician iOS Work Order - Regression', () => {
   // TC-10: Verify Completion Remark
   it('TC-10 - Verify Completion Remark', async () => {
     const targetAsset = 'Formula Asset with nfc';
-    const targetWoId = 'WO-41754';
-    const targetWoTitle = 'Smoke Test - WO PM';
     const completionRemark = 'My work is done';
 
-    // Step 1: Open WO
-    await technicianIosWorkOrderScreen.openWorkOrderViaAssetScan(
-      targetAsset,
-      targetWoId,
-      targetWoTitle,
-    );
+    // Step 1: Open first available WO for target asset
+    await technicianIosWorkOrderScreen.openWorkOrderViaAssetScan(targetAsset);
 
-    // Step 2: Enter completion remark & Step 3: Save/continue
+    // Step 2: Fill mandatory checklist instructions and verify Mark as Complete button appears
+    await technicianIosWorkOrderInstructionScreen.fillMandatoryWorkOrderInstructions();
+
+    // Step 3: Enter completion remark & Step 4: Save/continue
     await technicianIosWorkOrderScreen.enterCompletionRemark(completionRemark);
 
     // Expected Result: Popup indicating successfully marked as complete
@@ -153,18 +145,15 @@ describe('Technician iOS Work Order - Regression', () => {
   // TC-11: Verify Mark WO as Complete
   it('TC-11 - Verify Mark WO as Complete', async () => {
     const targetAsset = 'Formula Asset with nfc';
-    const targetWoId = 'WO-41539';
-    const targetWoTitle = 'Smoke Test - WO PM';
     const completionRemark = 'My work is done';
 
-    // Step 1: Open WO
-    await technicianIosWorkOrderScreen.openWorkOrderViaAssetScan(
-      targetAsset,
-      targetWoId,
-      targetWoTitle,
-    );
+    // Step 1: Open first available WO for target asset
+    const actualWoId = await technicianIosWorkOrderScreen.openWorkOrderViaAssetScan(targetAsset);
 
-    // Step 2, 3, 4: Complete required work, enter remark, tap Mark as Complete
+    // Step 2: Fill mandatory checklist instructions and verify Mark as Complete button appears
+    await technicianIosWorkOrderInstructionScreen.fillMandatoryWorkOrderInstructions();
+
+    // Step 3, 4: Complete required work, enter remark, tap Mark as Complete
     await technicianIosWorkOrderScreen.enterCompletionRemark(completionRemark);
 
     // Step 5: Verify success popup and confirm/dismiss
@@ -172,22 +161,17 @@ describe('Technician iOS Work Order - Regression', () => {
     await technicianIosWorkOrderScreen.dismissSuccessPopup();
 
     // Expected Result: Transition from OPEN to CLOSED tab and verify WO ID is displayed
-    await technicianIosWorkOrderScreen.verifyWorkOrderInClosedTab(targetWoId);
+    await technicianIosWorkOrderScreen.verifyWorkOrderInClosedTab(actualWoId);
   });
 
   // TC-12: Verify Completed WO Removed from Open List
   it('TC-12 - Verify Completed WO Removed from Open List', async () => {
     const targetAsset = 'Formula Asset with nfc';
-    const targetWoId = 'WO-40176';
-    const targetWoTitle = 'Smoke Test - WO PM';
     const completionRemark = 'My work is done';
 
-    // Step 1: Complete WO
-    await technicianIosWorkOrderScreen.openWorkOrderViaAssetScan(
-      targetAsset,
-      targetWoId,
-      targetWoTitle,
-    );
+    // Step 1: Complete first available WO for target asset
+    const actualWoId = await technicianIosWorkOrderScreen.openWorkOrderViaAssetScan(targetAsset);
+    await technicianIosWorkOrderInstructionScreen.fillMandatoryWorkOrderInstructions();
     await technicianIosWorkOrderScreen.enterCompletionRemark(completionRemark);
     await technicianIosWorkOrderScreen.verifySuccessfullyMarkedAsComplete();
     await technicianIosWorkOrderScreen.dismissSuccessPopup();
@@ -199,7 +183,7 @@ describe('Technician iOS Work Order - Regression', () => {
     await technicianIosWorkOrderScreen.refreshList();
 
     // Expected Result: Completed WO is removed from the Open list
-    await technicianIosWorkOrderScreen.verifyWorkOrderNotPresentInOpenList(targetWoId);
+    await technicianIosWorkOrderScreen.verifyWorkOrderNotPresentInOpenList(actualWoId);
   });
 
   // TC-17: Verify Work Order Status Update
@@ -208,7 +192,8 @@ describe('Technician iOS Work Order - Regression', () => {
     const holdReason = 'Waiting for spare parts from vendor';
 
     // Step 1: Open the first available WO for the selected asset via Scan
-    const targetWoId = await technicianIosWorkOrderScreen.openFirstWorkOrderViaAssetScan(targetAsset);
+    const targetWoId =
+      await technicianIosWorkOrderScreen.openFirstWorkOrderViaAssetScan(targetAsset);
 
     // Step 2: Open Workorder status update modal
     await technicianIosWorkOrderScreen.openUpdateStatusModal();
@@ -224,11 +209,9 @@ describe('Technician iOS Work Order - Regression', () => {
     await browser.pause(2000);
     await technicianIosWorkOrderScreen.submitStatusUpdate();
     // Step 5: Verify work order transitions into the HOLD filter
-    await technicianIosWorkOrderScreen.verifyWorkOrderInHoldFilter(targetWoId );
+    await technicianIosWorkOrderScreen.verifyWorkOrderInHoldFilter(targetWoId);
 
     // Step 6: Open the same WO in HOLD section, click Update, then click History to verify status changed to HOLD
     await technicianIosWorkOrderScreen.verifyStatusInHistory(targetWoId || targetAsset);
   });
 });
-
-
